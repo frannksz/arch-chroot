@@ -3,7 +3,7 @@
 Esse script é a continuação do [arch-install](https://github.com/frannksz/arch-install), só que esse roda dentro do chroot.
 
 ### ATENÇÃO
-
+- TOTALMENTE RECOMENDO ler a [wiki](https://wiki.archlinux.org/title/Installation_guide)
 - CUIDADO tudo que acontece dentro do chroot afeta diretamente dentro do seu sistema.
 - RECOMENDO MAIS UMA VEZ... LEIA O SCRIPT ANTES DE EXECUTA-LO.
 - NÃO me responsabilizo por danos.
