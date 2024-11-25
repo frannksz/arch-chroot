@@ -20,12 +20,32 @@ timezone_config(){
 
 # Definir linguagem do sistema
 language_system(){
-  #sed -i -r 's/^#(.*en_US.UTF-8 UTF-8.*)$/\1/' /etc/locale.gen
-  sed -i '171s/^#//' /etc/locale.gen
-  clear && locale-gen
-  echo LANG=en_US.UTF-8 > /etc/locale.conf
-  export LANG=en_US.UTF-8
-  read -p 'LOCALE configurado, PRESSIONE ENTER PARA CONTINUAR...'
+  clear
+  echo "Escolha o idioma do sistema:"
+  echo "[1] - Inglês (English)"
+  echo "[2] - Português Brasileiro (Brazilian Portuguese)"
+  read -p "Escolha uma opção [1 ou 2]: " LANGUAGE_CHOICE
+
+  if [ "$LANGUAGE_CHOICE" == "1" ]; then
+    # Configura o idioma para Inglês
+    sed -i '171s/^#//' /etc/locale.gen
+    clear && locale-gen
+    echo LANG=en_US.UTF-8 > /etc/locale.conf
+    export LANG=en_US.UTF-8
+    echo "Idioma configurado para Inglês. Pressione ENTER para continuar."
+    read
+  elif [ "$LANGUAGE_CHOICE" == "2" ]; then
+    # Configura o idioma para Português
+    sed -i '391s/^#//' /etc/locale.gen
+    clear && locale-gen
+    echo LANG=pt_BR.UTF-8 > /etc/locale.conf
+    export LANG=pt_BR.UTF-8
+    echo "Idioma configurado para Português Brasileiro. Pressione ENTER para continuar."
+    read
+  else
+    echo "Opção inválida. Por favor, escolha 1 ou 2."
+    language_system
+  fi
 }
 
 # Configurar o abnt2 para bootar com o sistema
@@ -120,7 +140,7 @@ password_user(){
 
 # Editar o arquivo do sudo
 edit_sudoers(){
-  sed -i '121s/^# //' /etc/sudoers
+  sed -i '125s/^# //' /etc/sudoers
   #sed -i '89s/^[ \t]*//' /etc/sudoers
   #sed -i -r 's/^#(.*%wheel ALL=(ALL:ALL) ALL.*)$/\1/' /etc/sudoers
 }
