@@ -1,162 +1,184 @@
 #!/usr/bin/env bash
 
-# ===============================================
-#                   Franklin Souza#
-#                      @frannksz
-# ===============================================                      
+# ======================================================
+#  Pós-instalação do Arch Linux - Franklin Souza (@frannksz)
+# ======================================================
 
-# Habilitar rede dhcp
-dhcpcd_enable(){
+set -euo pipefail
+
+# === Cores ===
+RED="\e[31m"
+GREEN="\e[32m"
+CYAN="\e[36m"
+RESET="\e[0m"
+
+msg() {
+  echo -e "${CYAN}[INFO]${RESET} $1"
+}
+
+erro() {
+  echo -e "${RED}[ERRO]${RESET} $1" >&2
+  exit 1
+}
+
+# === Habilitar rede ===
+dhcpcd_enable() {
   clear
+  msg "Habilitando dhcpcd..."
   systemctl enable dhcpcd
 }
 
-# Alterar fuso-horario
-timezone_config(){
+# === Fuso horário ===
+timezone_config() {
+  msg "Configurando fuso horário para America/Sao_Paulo"
   ln -sf /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
   hwclock --systohc
-  #timedatectl set-ntp true
 }
 
-# Definir linguagem do sistema
-language_system(){
+# === Idioma ===
+language_system() {
   clear
-  echo "Escolha o idioma do sistema:"
-  echo "[1] - Inglês (English)"
-  echo "[2] - Português Brasileiro (Brazilian Portuguese)"
-  read -p "Escolha uma opção [1 ou 2]: " LANGUAGE_CHOICE
+  echo -e "${CYAN}Escolha o idioma do sistema:${RESET}"
+  echo "[1] Inglês (en_US.UTF-8)"
+  echo "[2] Português Brasileiro (pt_BR.UTF-8)"
+  read -p "Opção [1 ou 2]: " LANGUAGE_CHOICE
 
-  if [ "$LANGUAGE_CHOICE" == "1" ]; then
-    # Configura o idioma para Inglês
-    sed -i '171s/^#//' /etc/locale.gen
-    clear && locale-gen
-    echo LANG=en_US.UTF-8 > /etc/locale.conf
-    export LANG=en_US.UTF-8
-    echo "Idioma configurado para Inglês. Pressione ENTER para continuar."
-    read
-  elif [ "$LANGUAGE_CHOICE" == "2" ]; then
-    # Configura o idioma para Português
-    sed -i '391s/^#//' /etc/locale.gen
-    clear && locale-gen
-    echo LANG=pt_BR.UTF-8 > /etc/locale.conf
-    export LANG=pt_BR.UTF-8
-    echo "Idioma configurado para Português Brasileiro. Pressione ENTER para continuar."
-    read
-  else
-    echo "Opção inválida. Por favor, escolha 1 ou 2."
-    language_system
-  fi
+  case "$LANGUAGE_CHOICE" in
+    1)
+      sed -i '171s/^#//' /etc/locale.gen
+      ;;
+    2)
+      sed -i '391s/^#//' /etc/locale.gen
+      ;;
+    *)
+      echo "Opção inválida!"
+      return language_system
+      ;;
+  esac
+
+  locale-gen
+
+  LANG_CODE=$( [ "$LANGUAGE_CHOICE" = "1" ] && echo "en_US.UTF-8" || echo "pt_BR.UTF-8" )
+  echo "LANG=$LANG_CODE" > /etc/locale.conf
+  export LANG="$LANG_CODE"
+  read -rp "Idioma configurado para $LANG_CODE. Pressione ENTER para continuar..."
 }
 
-# Configurar o abnt2 para bootar com o sistema
-keymap_config(){
-  echo KEYMAP=br-abnt2 > /etc/vconsole.conf
+# === Teclado ===
+keymap_config() {
+  echo "KEYMAP=br-abnt2" > /etc/vconsole.conf
 }
 
-# Alterar o nome da maquina
-hostname_config(){
-  clear && printf "Digite abaixo um hostname para a sua maquina:\n\n"
-  read HOST_NAME
+# === Hostname ===
+hostname_config() {
+  clear
+  read -rp "Digite o nome da máquina (hostname): " HOST_NAME
   echo "$HOST_NAME" > /etc/hostname
 }
 
-# Instalar o btrfs-progs
-btrfs_progs_config(){
+# === Btrfs-progs ===
+btrfs_progs_config() {
+  msg "Instalando btrfs-progs..."
   pacman -S btrfs-progs --noconfirm
 }
 
-# Instalar kernels
-kernels_download(){
-  clear && printf "Escolha seu kernel de preferência:\n\n[1] - linux (Kernel defautl)\n[2] - linux-hardened (Kernel focado na segurança)\n[3] - linux-lts (Kernel a longo prazo)\n[4] - linux-zen (Kernel focado em desempenho)\n\n"
-  read KERNEL_CHOICE
-  if [ $KERNEL_CHOICE == '1' ] || [ $KERNEL_CHOICE == '01' ] ; then
-    clear && pacman -S linux --noconfirm
+# === Kernel ===
+kernels_download() {
+  clear
+  echo -e "${CYAN}Escolha o kernel:${RESET}"
+  echo "[1] linux (padrão)"
+  echo "[2] linux-hardened (segurança)"
+  echo "[3] linux-lts (estável)"
+  echo "[4] linux-zen (performance)"
+  read -p "Opção: " KERNEL_CHOICE
 
-  elif [ $KERNEL_CHOICE == '2' ] || [ $KERNEL_CHOICE == '02' ] ; then
-    clear && pacman -S linux-hardened --noconfirm
-
-  elif [ $KERNEL_CHOICE == '3' ] || [ $KERNEL_CHOICE == '03' ] ; then
-    clear && pacman -S linux-lts --noconfirm
-
-  elif [ $KERNEL_CHOICE == '4' ] || [ $KERNEL_CHOICE == '04' ] ; then
-    clear && pacman -S linux-zen --noconfirm
-
-  else
-    read -p 'Opção invalida, POR FAVOR ESCOLHA UM KERNEL, PRESSIONE ENTER PARA CONTINUAR...' && kernels_download
-  fi
+  case "$KERNEL_CHOICE" in
+    1|01) pacman -S linux --noconfirm ;;
+    2|02) pacman -S linux-hardened --noconfirm ;;
+    3|03) pacman -S linux-lts --noconfirm ;;
+    4|04) pacman -S linux-zen --noconfirm ;;
+    *) read -p "Opção inválida. Pressione ENTER para tentar novamente..." && kernels_download ;;
+  esac
 }
 
-# Configurar o pacman
-pacman_config(){
-  sed -i -r 's/^#(.*UseSyslog.*)$/\1/' /etc/pacman.conf
-  sed -i -r 's/^#(.*Color.*)$/\1/' /etc/pacman.conf
-  sed -i -r 's/^#(.*CheckSpace.*)$/\1/' /etc/pacman.conf
-  sed -i -r 's/^#(.*VerbosePkgLists.*)$/\1/' /etc/pacman.conf
-  sed -i -r 's/^#(.*ParallelDownloads.*)$/\1/' /etc/pacman.conf
-  sed -i '/ParallelDownloads/s/5/100/g' /etc/pacman.conf
+# === Configurar Pacman ===
+pacman_config() {
+  msg "Otimizando configurações do pacman"
+  sed -i -r 's/^#(UseSyslog|Color|CheckSpace|VerbosePkgLists|ParallelDownloads)/\1/' /etc/pacman.conf
+  sed -i '/^ParallelDownloads/s/=[[:space:]]*[0-9]*/= 100/' /etc/pacman.conf
   sed -i '40s/$/ILoveCandy/' /etc/pacman.conf
   sed -i '92,93s/^#//' /etc/pacman.conf
 }
 
-# Atualizar o repositorio
-repo_update(){
-  clear && pacman -Syy
+# === Atualizar repositórios ===
+repo_update() {
+  clear && pacman -Syy --noconfirm
 }
 
-# Definir senha ROOT
-password_root(){
-  clear && printf "Digite e confirme sua senha root abaixo (CUIDADO A SENHA NÃO É EXIBIDA):\n\n"
+# === Senha root ===
+password_root() {
+  clear
+  msg "Digite a senha de root:"
   passwd
 }
 
-# Criar um usuario
-user_create(){
-  clear && printf "Criando usuario, escolha seu shell de preferência:\n\n[1] - bash\n[2] - zsh\n\n"
-  read SHELL_CHOICE
-  if [ $SHELL_CHOICE == '1' ] || [ $SHELL_CHOICE == '01' ] ; then
-    clear && pacman -S bash --noconfirm
-    clear && printf "Digite o nome do seu usuario abaixo (COM LETRAS MINUSCULAS SEM ACENTOS E SEM ESPAÇOS):\n\n"
-    read USERNAME
-    clear && useradd -m -g users -G wheel -s /bin/bash "$USERNAME"
+# === Criar usuário ===
+user_create() {
+  clear
+  echo -e "${CYAN}Escolha o shell do usuário:${RESET}"
+  echo "[1] bash"
+  echo "[2] zsh"
+  read -p "Opção: " SHELL_CHOICE
 
-  elif [ $SHELL_CHOICE == '2' ] || [ $SHELL_CHOICE == '02' ] ; then
-    clear && pacman -S zsh --noconfirm
-    clear && printf "Digite o nome do seu usuario abaixo (COM LETRAS MINUSCULAS SEM ACENTOS E SEM ESPAÇOS):\n\n"
-    read USERNAME
-    clear && useradd -m -g users -G wheel -s /bin/zsh "$USERNAME"
+  case "$SHELL_CHOICE" in
+    1|01)
+      SHELL_PATH="/bin/bash"
+      pacman -S bash --noconfirm
+      ;;
+    2|02)
+      SHELL_PATH="/bin/zsh"
+      pacman -S zsh --noconfirm
+      ;;
+    *)
+      read -p "Opção inválida. Pressione ENTER para tentar novamente..." && user_create
+      return
+      ;;
+  esac
 
-  else
-    read -p 'Opção invalida, por favor tente novamente PRESSIONE ENTER PARA CONTINUAR...' && user_create
-  fi
+  read -rp "Digite o nome de usuário (sem espaços ou acentos): " USERNAME
+  useradd -m -g users -G wheel -s "$SHELL_PATH" "$USERNAME"
 }
 
-# Definir senha do USUARIO
-password_user(){
-  clear && read -p 'Digite e confirme a sua senha de usuario abaixo (CUIDADO A SENHA NÃO É EXIBIDA) PRESSIONE ENTER PARA CONTINUAR...'
-  clear && printf "Digite seu nome de usuario abaixo:\n\n"
-  read USERNAME1
+# === Senha do usuário ===
+password_user() {
+  clear
+  read -rp "Digite o nome do usuário para definir a senha: " USERNAME1
   passwd "$USERNAME1"
 }
 
-# Editar o arquivo do sudo
-edit_sudoers(){
+# === Permitir sudo para grupo wheel ===
+edit_sudoers() {
   sed -i '125s/^# //' /etc/sudoers
-  #sed -i '89s/^[ \t]*//' /etc/sudoers
-  #sed -i -r 's/^#(.*%wheel ALL=(ALL:ALL) ALL.*)$/\1/' /etc/sudoers
 }
 
-# Baixar e instalar o grub
-grub_install(){
-  clear && pacman -S grub efibootmgr --noconfirm
+# === Instalar GRUB ===
+grub_install() {
+  clear
+  msg "Instalando o GRUB..."
+  pacman -S grub efibootmgr --noconfirm
   grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ArchLinux --recheck
   grub-mkconfig -o /boot/grub/grub.cfg
 }
 
-# Finalaização do script
-finish_install(){
-  clear && read -p 'Instalação finalizada, NÃO ESQUEÇA DE SAIR DO CHROOT E REBOOTAR O PC!!! PRESSIONE ENTER PARA CONTINUAR...' && exit 0
+# === Fim ===
+finish_install() {
+  clear
+  echo -e "${GREEN}Instalação concluída com sucesso!${RESET}"
+  read -p "Saia do chroot e reinicie o sistema. Pressione ENTER para sair..."
+  exit 0
 }
 
+# === Execução sequencial ===
 dhcpcd_enable
 timezone_config
 language_system
